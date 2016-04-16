@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Nerd Launcher</string>
+    <string name="tab_all_app">All Apps</string>
+    <string name="tab_current_app">Current Apps</string>
 </resources>
