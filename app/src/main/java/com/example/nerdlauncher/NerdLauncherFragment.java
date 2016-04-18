@@ -1,17 +1,18 @@
 package com.example.nerdlauncher;
 
+import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -22,54 +23,41 @@ import android.widget.TextView;
 
 import com.example.nerdlauncher.activity.ActivityContent;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 public class NerdLauncherFragment extends Fragment {
     public static final String TAG = "NerdLauncherFragment";
+    public static final String EXRA_LIST_KEY = "com.example.nerdlauncher.list_key";
 
+    private String mListKey;
     private OnListFragmentInteractionListener mListener;
+
+    public static Fragment setInstrance(String listKey) {
+        Bundle args = new Bundle();
+        args.putString(EXRA_LIST_KEY, listKey);
+        NerdLauncherFragment fragment = new NerdLauncherFragment();
+        fragment.setArguments(args);
+        return fragment;
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Intent startupIntent = new Intent(Intent.ACTION_MAIN);
-        startupIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-
-        PackageManager pm = getActivity().getPackageManager();
-        List<ResolveInfo> activities = pm.queryIntentActivities(startupIntent, 0);
-
-        Log.i(TAG, "I've found "+ activities.size()+" activities.");
-
-        Collections.sort(activities, new Comparator<ResolveInfo>() {
-            @Override
-            public int compare(ResolveInfo a, ResolveInfo b) {
-                PackageManager pm = getActivity().getPackageManager();
-                return String.CASE_INSENSITIVE_ORDER
-                        .compare(a.loadLabel(pm).toString(),
-                                b.loadLabel(pm).toString());
-            }
-        });
-
-        ActivityContent.additems(activities);
+        mListKey = (String) getArguments().getSerializable(EXRA_LIST_KEY);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_nerdlauncher, container, false);
-        Toolbar toolbar = (Toolbar) view.findViewById(R.id.toolbar);
-        toolbar.setTitle(R.string.app_name);
-        ((AppCompatActivity) getActivity()).setSupportActionBar(toolbar);
+        View view = inflater.inflate(R.layout.fragment_nerdlauncher_list, container, false);
 
-        
+        if (view instanceof RecyclerView) {
+            RecyclerView recyclerView = (RecyclerView) view;
+            recyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
+            recyclerView.setAdapter(new MyNerdLauncherRecyclerViewAdapter(ActivityContent.getItems(mListKey), mListener));
+        }
 
-
-        RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.list);
-        recyclerView.setLayoutManager(new LinearLayoutManager(recyclerView.getContext()));
-        recyclerView.setAdapter(new MyNerdLauncherRecyclerViewAdapter(ActivityContent.getItems(), mListener));
         return view;
     }
 
@@ -97,12 +85,12 @@ public class NerdLauncherFragment extends Fragment {
     public class MyNerdLauncherRecyclerViewAdapter extends RecyclerView.Adapter<MyNerdLauncherRecyclerViewAdapter.ViewHolder> {
 
         private final TypedValue mTypedValue = new TypedValue();
-        private final List<ResolveInfo> mValues;
+        private final List mValues;
         private final OnListFragmentInteractionListener mListener;
 
         private int mBackground;
 
-        public MyNerdLauncherRecyclerViewAdapter(List<ResolveInfo> items, OnListFragmentInteractionListener listener) {
+        public MyNerdLauncherRecyclerViewAdapter(List items, OnListFragmentInteractionListener listener) {
             getActivity().getTheme().resolveAttribute(R.attr.selectableItemBackground, mTypedValue, true);
             mBackground = mTypedValue.resourceId;
             mValues = items;
@@ -119,29 +107,53 @@ public class NerdLauncherFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(final ViewHolder holder, int position) {
-            holder.mItem = mValues.get(position);
-            PackageManager pm = getActivity().getPackageManager();
-            CharSequence label = mValues.get(position).loadLabel(pm);
-            holder.mActivityNameView.setText(label);
-            Drawable icon = mValues.get(position).loadIcon(pm);
-            holder.mActivityIconVIew.setImageDrawable(icon);
+            if(mValues.get(position) instanceof ResolveInfo) {
+                holder.mItemResolve = (ResolveInfo) mValues.get(position);
+                PackageManager pm = getActivity().getPackageManager();
+                CharSequence label = holder.mItemResolve.loadLabel(pm);
+                holder.mActivityNameView.setText(label);
+                Drawable icon = holder.mItemResolve.loadIcon(pm);
+                holder.mActivityIconVIew.setImageDrawable(icon);
 
-            holder.mView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mListener != null) {
-                        mListener.onListFragmentInteraction(holder.mItem);
+                holder.mView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (mListener != null) {
+                            mListener.onListFragmentInteraction(holder.mItemResolve);
+                        }
+
+                        Context context = v.getContext();
+                        ActivityInfo activityInfo = holder.mItemResolve.activityInfo;
+                        if (activityInfo == null) return;
+                        Intent i = new Intent(Intent.ACTION_MAIN);
+                        i.setClassName(activityInfo.packageName, activityInfo.name);
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        context.startActivity(i);
                     }
+                });
+            } else if(mValues.get(position) instanceof ActivityManager.RunningTaskInfo) {
 
-                    Context context = v.getContext();
-                    ActivityInfo activityInfo = holder.mItem.activityInfo;
-                    if (activityInfo == null) return;
-                    Intent i = new Intent(Intent.ACTION_MAIN);
-                    i.setClassName(activityInfo.packageName, activityInfo.name);
-                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    context.startActivity(i);
+                holder.mItemTaskInfo = (ActivityManager.RunningTaskInfo) mValues.get(position);
+                PackageManager pm = getActivity().getPackageManager();
+                ApplicationInfo applicationInfo = null;
+                try {
+                    applicationInfo = pm.getApplicationInfo(holder.mItemTaskInfo.baseActivity.getPackageName(), 0);
+                } catch (PackageManager.NameNotFoundException e) {
+                    e.printStackTrace();
+                    Log.d(TAG, "Didn't find App "+holder.mItemTaskInfo.baseActivity.getPackageName());
                 }
-            });
+                if (applicationInfo != null) {
+                    holder.mActivityNameView.setText(pm.getApplicationLabel(applicationInfo));
+                    holder.mActivityIconVIew.setImageDrawable(pm.getApplicationIcon(applicationInfo));
+                    holder.mView.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            ActivityManager am = (ActivityManager) getActivity().getSystemService(Activity.ACTIVITY_SERVICE);
+                            am.moveTaskToFront(holder.mItemTaskInfo.id, 0);
+                        }
+                    });
+                }
+            }
         }
 
         @Override
@@ -153,7 +165,8 @@ public class NerdLauncherFragment extends Fragment {
             public final View mView;
             public final TextView mActivityNameView;
             public final ImageView mActivityIconVIew;
-            public ResolveInfo mItem;
+            public ResolveInfo mItemResolve;
+            public ActivityManager.RunningTaskInfo mItemTaskInfo;
 
             public ViewHolder(View view) {
                 super(view);

@@ -26,9 +26,11 @@
 
     </android.support.design.widget.AppBarLayout>
 
-    <include
-        android:id="@+id/list"
-        layout="@layout/fragment_nerdlauncher_list"/>
+   <android.support.v4.view.ViewPager
+       android:id="@+id/view_pager"
+       android:layout_width="match_parent"
+       android:layout_height="match_parent"
+       app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
 </android.support.design.widget.CoordinatorLayout>
 

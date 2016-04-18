@@ -9,17 +9,13 @@ import java.util.Map;
 
 public class ActivityContent {
 
-    public static List<ResolveInfo> mActivityItems;
+    public static HashMap<String, List> mActivityItemsTab = new HashMap<>();
 
-    public static void additems(List<ResolveInfo> items) {
-        mActivityItems = items;
+    public static void addItems(String key, List value) {
+        mActivityItemsTab.put(key, value);
     }
 
-    public static List<ResolveInfo> getItems() {
-        if (mActivityItems == null) {
-            mActivityItems = new ArrayList<ResolveInfo>();
-        }
-
-        return mActivityItems;
+    public static List<ResolveInfo> getItems(String key) {
+        return mActivityItemsTab.get(key);
     }
 }

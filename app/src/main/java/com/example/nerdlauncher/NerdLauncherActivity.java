@@ -7,11 +7,6 @@ import android.os.Bundle;
 public class NerdLauncherActivity extends SingleFragmentActivity implements NerdLauncherFragment.OnListFragmentInteractionListener{
 
     @Override
-    protected Fragment createFragment() {
-        return new NerdLauncherFragment();
-    }
-
-    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
     }
